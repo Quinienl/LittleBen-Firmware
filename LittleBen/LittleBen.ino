@@ -14,7 +14,7 @@ byte reset_on_beat = 16;
 #define TM1637_DISPLAY
 #define TM1637_CLK_PIN 10
 #define TM1637_DIO_PIN 11
-#define TM1637_BRIGHTNESS 0x0f
+#define TM1637_BRIGHTNESS 1
 
 TM1637 tm(TM1637_CLK_PIN, TM1637_DIO_PIN);
 
@@ -50,6 +50,7 @@ volatile unsigned long last_micros;
 
 volatile long displayTimer;
 int displayTimeOut = 500;
+int displayStoppedTimeOut = 1500;
 
 void setup() {
 
@@ -65,7 +66,7 @@ void setup() {
 
   tm.begin();
   tm.setBrightness(TM1637_BRIGHTNESS);
-  setDisplayValue(bpm);
+  setDisplayValueFloat(bpm);
 
   pinMode (inputCLK,INPUT_PULLUP);
   pinMode (inputDT,INPUT_PULLUP);
@@ -214,7 +215,7 @@ void outputClock(byte pins)
    digitalWrite(outputLatchPin, HIGH);
 }
 
-long calculateIntervalMicroSecs(int bpm) {
+long calculateIntervalMicroSecs(float bpm) {
   return 60L * 1000 * 1000 / bpm / pulse_per_beat;
 }
 
@@ -234,13 +235,13 @@ void setDisplayValue(int value) {
 
 void setDisplayValueFloat(float value) {
   if(statusClock == 1) {
+    tm.changeBrightness(4);
     tm.display(value)->scrollLeft(displayTimeOut);
   } else if(statusClock == 0) { 
-    // Somewhat buggie code here but does the job.
-    // Need better fix next commit.    
-    tm.setBrightness(TM1637_BRIGHTNESS);
-    tm.display(value)->blink(displayTimeOut);
+    tm.changeBrightness(1);
+    tm.display(value);
   } else {
+    tm.changeBrightness(4);
     tm.display(value);
   }
 }
