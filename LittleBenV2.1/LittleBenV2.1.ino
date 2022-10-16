@@ -191,24 +191,28 @@ void CheckRotary() {
 
 // Rotary updates BPM 
 void UpdateBPM() {
-  if (digitalRead(inputDT) != currentStateCLK) { 
-     bpm++; 
-   } else {
-     bpm--;
-   }
-   updateTimer();
-   updateScreen = true;
+  if(clockSource == 0) { // only update if clock is internal
+    if (digitalRead(inputDT) != currentStateCLK) { 
+       bpm++; 
+     } else {
+       bpm--;
+     }
+     updateTimer();
+     updateScreen = true;
+  }
 }
 
 // Updates BPM Decimal
 void UpdateBPMDecimal() {
-  if (digitalRead(inputDT) != currentStateCLK) { 
-     bpm += 0.1; 
-   } else {
-     bpm -=0.1;
-   }
-   updateTimer();
-   updateScreen = true;
+  if(clockSource == 0) { // only update if clock is internal
+    if (digitalRead(inputDT) != currentStateCLK) { 
+       bpm += 0.1; 
+     } else {
+       bpm -=0.1;
+     }
+     updateTimer();
+     updateScreen = true;
+  }
 }
 
 // Update the type of clock
