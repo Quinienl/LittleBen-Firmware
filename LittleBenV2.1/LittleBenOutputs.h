@@ -6,7 +6,7 @@ class LittleBenOutput {
   
   private:
    
-    void pulseClockDivider(byte ppqn);
+    void pulseClockDivider();
     void pulseBeat(byte ppqn);
     void pulseRandom();
 
@@ -41,8 +41,8 @@ class LittleBenOutput {
     String GetTypeName();
     String GetTypeValueText(); 
     
-    void SetType(byte value);
-    void SetTypeValue(byte value);
+    void SetType(int value);
+    void SetTypeValue(int value);
 
     void resetCounters(); // Reset all counter used when LittleBen is stopped.
 };

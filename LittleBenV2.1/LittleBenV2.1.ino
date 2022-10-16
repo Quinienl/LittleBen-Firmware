@@ -18,7 +18,6 @@
 #include "LittleBenOutputs.h"
 
 int const maxLBOutput = 8;
-
 // Load the outputs as class
 LittleBenOutput LBOutputs[maxLBOutput] = {
   LittleBenOutput(0, "One"),
@@ -126,6 +125,7 @@ void setup() {
   display.setTextColor(SSD1306_WHITE);
 
   printScreenDefault();
+
 }
 
 void loop() {
@@ -218,16 +218,19 @@ void UpdateClockSource() {
 }
 
 void UpdateOutputSelector() {
+  int tmp = selectedLBOutput; // integer temp value for calulations and suppressing bufferoverflow of bytes
   if (digitalRead(inputDT) != currentStateCLK) { 
-     selectedLBOutput++; 
+     tmp++; 
    } else {
-     selectedLBOutput--;
+     tmp--;
    }
-   if(selectedLBOutput == 255) {
+   
+   if(tmp < 0) {
       selectedLBOutput = 7;
-   }
-   if(selectedLBOutput >= 8) {
+   } else if(tmp >= 8) {
       selectedLBOutput = 0;
+   } else {
+      selectedLBOutput = tmp;
    }
    updateScreen = true;
 }
@@ -405,23 +408,25 @@ void printScreenBPM() {
 }
 
 void printScreenMenuSelection() {
-    if(menuItem == 0 ) {
+    switch(menuItem) {
+      case 0: //Clock
         display.drawLine(52, 15, 86, 15, WHITE); // BPM
-    }
-    if(menuItem == 1 ) {
+        break;
+      case 1:
         display.drawLine(98, 15, 120, 15, WHITE); // BPM Decimal
-    }
-    if(menuItem == 2 ) {
+        break;
+      case 2:
         display.drawLine(52, 30, 120, 30, WHITE); // ClockSource
-    }
-    if(menuItem == 3 ) {
+        break;
+      case 3:
         display.drawLine(0, 15, 60, 15, WHITE); // OutputName, Output selector
-    }
-    if(menuItem == 4 ) {
+        break;
+      case 4:
         display.drawLine(70, 8, 120, 8, WHITE); // OutputType, Clock, Beat, Random
-    }
-    if(menuItem == 5 ) {
+        break;
+      case 5:
         display.drawLine(0, 31, 130, 31, WHITE); // OutputType Value
+        break;
     }
 }
 

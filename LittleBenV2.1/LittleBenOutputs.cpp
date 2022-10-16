@@ -14,20 +14,36 @@ String LittleBenOutput::GetTypeName() {
   return typeName[type];
 }
 
-void LittleBenOutput::SetTypeValue(byte value) {
+void LittleBenOutput::SetType(int value) {
+  int tmp = type + value;; // integer temp value for calulations and suppressing bufferoverflow of bytes
+  
+  // check for out of range items
+  if(tmp < 0) { type = 2;} // random (last)
+  else if(tmp >= 3) { type = 0;} // clock (first)
+  else {type = tmp;} // in between
+  
+}
+
+void LittleBenOutput::SetTypeValue(int value) {
+  int tmp; // integer temp value for calulations and suppressing bufferoverflow of bytes
   switch(type) {
     case 0: //Clock
-      clockDivider += value;
-      if(clockDivider == 0) {clockDivider =1;}
+      tmp = clockDivider + value;
+      if(tmp <= 0) {clockDivider = 1;}
+      else if(tmp >= 255) {clockDivider = 255;}
+      else {clockDivider = tmp;}
       break;
     case 1: //Beat
-      beatCountDivider += value;
-      if(beatCountDivider == 0) {beatCountDivider =1;}
+      tmp = beatCountDivider + value;
+      if(tmp <= 0) {beatCountDivider = 1;}
+      else if(tmp < 255) {beatCountDivider = 255;}
+      else {beatCountDivider = tmp;}
       break;
     case 2: //Random
-      randomRange += value;;
-      if(randomRange == 255) {randomRange = 0;}
-      if(randomRange >= 101) {randomRange = 100;}
+      tmp = randomRange + value;
+      if(tmp <= 0) {randomRange = 1;}
+      else if(tmp > 100) {randomRange = 100;}
+      else {randomRange = tmp;}
       break;
   }
 }
@@ -64,28 +80,13 @@ String LittleBenOutput::GetTypeValueText() {
       return s;
       break;
   }
-}
-
-void LittleBenOutput::SetType(byte value) {
-  type += value; // add value to the type
-  
-  // check for out of range items
-  if(type == 255) {
-    type = 2;
-  }
-  if(type >= 3) {
-    type = 0; // clock
-  }
-
-//  if (type == 0) {
-//    outputbit = 1; // set outbit as true
-//  }
+  return ""; // empty value if no case is true. This will never be reached if everything is ok. But will supress warning in compiler.
 }
 
 void LittleBenOutput::Pulse(byte ppqn) {
   switch(type) {
     case 0: //Clock
-      pulseClockDivider(ppqn);
+      pulseClockDivider();
       break;
     case 1: //Beat
       pulseBeat(ppqn);
@@ -96,7 +97,7 @@ void LittleBenOutput::Pulse(byte ppqn) {
   } 
 }
 
-void LittleBenOutput::pulseClockDivider(byte ppqn) {
+void LittleBenOutput::pulseClockDivider() {
     clockDividerCount++; // count
     // if count is over ppqn set back to zero
     if(clockDividerCount >= clockDivider ) {
