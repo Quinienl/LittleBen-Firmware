@@ -10,8 +10,22 @@ String LittleBenOutput::GetName() {
   return name;
 }
 
+byte LittleBenOutput::GetType() {
+  return type;
+}
 String LittleBenOutput::GetTypeName() {
   return typeName[type];
+}
+
+
+byte LittleBenOutput::GetclockDivider() {
+  return clockDivider;
+}
+byte LittleBenOutput::GetbeatCountDivider() {
+  return beatCountDivider;
+}
+byte LittleBenOutput::GetrandomRange() {
+  return randomRange;
 }
 
 void LittleBenOutput::SetType(int value) {
@@ -23,6 +37,19 @@ void LittleBenOutput::SetType(int value) {
   else {type = tmp;} // in between
   
 }
+
+void LittleBenOutput::SetclockDivider(byte value) {
+  clockDivider = value;
+}
+
+void LittleBenOutput::SetbeatCountDivider(byte value) {
+  beatCountDivider = value;
+}
+
+void LittleBenOutput::SetrandomRange(byte value) {
+  randomRange = value;
+}
+
 
 void LittleBenOutput::SetTypeValue(int value) {
   int tmp; // integer temp value for calulations and suppressing bufferoverflow of bytes
@@ -36,7 +63,7 @@ void LittleBenOutput::SetTypeValue(int value) {
     case 1: //Beat
       tmp = beatCountDivider + value;
       if(tmp <= 0) {beatCountDivider = 1;}
-      else if(tmp < 255) {beatCountDivider = 255;}
+      else if(tmp >= 255) {beatCountDivider = 255;}
       else {beatCountDivider = tmp;}
       break;
     case 2: //Random
@@ -63,7 +90,7 @@ String LittleBenOutput::GetTypeValueText() {
       if(clockDivider == 1) {
         return "Every Clock"; 
       } else {
-        snprintf(s, sizeof(s), "Every %i Clockpulses", clockDivider);
+        sprintf(s, "Every %i Clockpulses", clockDivider);
         return s;
       }
       break;
@@ -71,12 +98,12 @@ String LittleBenOutput::GetTypeValueText() {
       if(beatCountDivider == 1) {
         return "Every Beat"; 
       } else {
-        snprintf(s, sizeof(s), "Every %i Beats", beatCountDivider);
+        sprintf(s, "Every %i Beats", beatCountDivider);
         return s;
       }
       break;
     case 2: //Random
-      snprintf(s, sizeof(s), "Percent %i", randomRange);
+      sprintf(s, "Percent %i", randomRange);
       return s;
       break;
   }

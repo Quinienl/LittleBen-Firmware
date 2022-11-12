@@ -12,6 +12,7 @@
 #include <TimerOne.h>  
 #include <SPI.h>
 #include <Wire.h>
+#include <EEPROM.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
@@ -39,15 +40,6 @@ byte clockSource = 0; // 0 = internal, 1 = external
 String clockSourceText[2] = { "internal", "external"};
 
 long intervalMicroSeconds;  // variable for interval for timer running clock pulses calculted on BPM value
-
-//// Calculate Clock Variables
-//long clockPeriodes[9]; // storing periodes between clock incomming 
-//int maxPeriodeTimeout =  30000; // max time between clock pulse before starting it as new calculation
-//long clockLastTime = 0; // last time a clock was recieved
-//long clockCurrentTime = 0; // current clock time
-//byte clockNumberOfReadings = 0; // number of readings incomming clock
-//byte clockCurrentIndex = 0; // current number reading
-//byte clockCounter = 0; // used for counter function output
 
 // These are used to output the clock on the 595 chip
 // The bit are linked to the ouput as 2,4,6,8,1,3,5,7 <-- note: double check note sure
@@ -84,7 +76,11 @@ byte menuItem = 0;
 #define OLED_RESET     4 
 #define SCREEN_ADDRESS 0x3C
 
+int name;
+
 bool updateScreen = false;
+bool saving = false;
+long savingtime;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -118,11 +114,15 @@ void setup() {
   }
   
   display.clearDisplay();
-  display.setRotation(2); //set the display to rotate 180 degrees
-  //display.dim(true); //dim the display to 50%, better to avoid noise  
+  //display.setRotation(2); //set the display to rotate 180 degrees
+  display.dim(true); //dim the display to 50%, better to avoid noise  
 
   display.setTextSize(2);       
   display.setTextColor(SSD1306_WHITE);
+
+  // check if we have stored setting, if not store default settings 
+  // if we do have settings load them
+  checkMemory();
 
   printScreenDefault();
 
@@ -133,15 +133,38 @@ void loop() {
   CheckRotary(); // Check Rotary 
 
   // Check is screen needs update
-  if(updateScreen == true) { 
+  if(updateScreen) { 
     // if menu is not 4 it is not the default menu
     if(menuItem <= 2) {
       printScreenDefault();
+    } else if(menuItem == 6) {
+        printScreenSaveSettings(); 
     } else {
       printScreenOutputs();
     }
-    updateScreen= false;
+  updateScreen = false;
   }
+
+  if(saving) { 
+    long currentMillis = millis();
+    if((currentMillis - savingtime) >= 2000) {
+      saving = false;
+    }
+  }
+}
+
+void checkMemory() {
+  if(EEPROM.read(0) == 66) {
+    //eeprom has a B so loading previous saved settings
+    GetSettings();
+  } else {
+    StoreNameInMemory(); // store letter for check next time
+    SaveSettings(); // no letter in memory so saving default settings
+  }
+}
+
+void StoreNameInMemory() {
+   EEPROM.update(0, 'B');
 }
 
 // Check if rotary switch has been pushed
@@ -149,7 +172,7 @@ void loop() {
 void CheckRotarySwitch() {
    currentStateSW = digitalRead(inputSW);
    if (currentStateSW != previousStateSW && currentStateSW == 0) {
-      if(menuItem == 5) {
+      if(menuItem == 6) {
         menuItem = 0;
       } else {
         menuItem++;
@@ -183,6 +206,9 @@ void CheckRotary() {
           break;
         case 5:
           UpdateOutputTypeValue();         
+          break;
+        case 6:
+          UpdateSettings();         
           break;
      }
    }   
@@ -257,6 +283,16 @@ void UpdateOutputTypeValue() {
    updateScreen = true;
 }
 
+
+void UpdateSettings() {
+  saving = true;
+  updateScreen = true;
+  savingtime = millis();
+  
+  SaveSettings();
+}
+
+
 // Update the timer
 void updateTimer() {
   Timer1.setPeriod(calculateIntervalMicroSecs());
@@ -272,58 +308,8 @@ void ClockPulseInternal() {
 
 // Clock pulse comes from outside
 void ClockPulseOuter() {
-  //ClockPulseCalculate();
   ClockPulse();
 }
-
-// Clock pulse external will calculated to bpm.
-// Buggy Rebuild
-//----------------
-void ClockPulseCalculate() {
-
-//  long periode;
-//  
-//  if(clockLastTime == 0) {
-//    clockLastTime = clockCurrentTime;
-//    clockNumberOfReadings++;
-//  } else {
-//    periode = clockCurrentTime - clockLastTime;
-//    if(periode >= maxPeriodeTimeout){
-//      clockLastTime = clockCurrentTime;
-//      clockNumberOfReadings = 1;
-//      clockCurrentIndex = 0;
-//    } else {
-//      clockPeriodes[clockCurrentIndex] = periode;
-//      clockLastTime = clockCurrentTime;
-//      
-//      clockCurrentIndex++;
-//      if(clockCurrentIndex == 8) {
-//        clockCurrentIndex = 0;
-//      }
-//      
-//      clockNumberOfReadings++;
-//    }
-//  }
-//  if(clockNumberOfReadings >= 8) {
-//    calculateClock();
-//  }
-}
-
-//void calculateClock() {
-//  long total = 0;
-//  long avg;
-//  long bpmtemp;
-//  float test = 100;
-//  
-//  for (int i = 0; i < 8; i++) {
-//    total += clockPeriodes[i];
-//  }
-//  avg = total /8L;
-//  bpmtemp = (6000000L / avg) /100; 
-//  bpm = clockLastTime;
-//  
-//  updateScreen = true;
-//}
 
 void ClockPulse() {
   // run thru outputs
@@ -383,6 +369,41 @@ long calculateIntervalMicroSecs() {
   return 60L * 1000 * 1000 / bpm / ppqn;
 }
 
+void SaveSettings() {
+  // store BPM and PPQN
+  EEPROM.put(10, bpm);
+  EEPROM.update(20, ppqn);
+  
+  // store Clock source
+  EEPROM.update(30, clockSource);
+  // store Clock status
+  EEPROM.update(40, statusClock);
+
+  // Store each output settings
+  for (int i = 0; i < maxLBOutput; i++) {
+    byte address = 100 + (i * 10); // start at 100 plus 10 for every output
+    EEPROM.update(address, LBOutputs[i].GetType());
+    EEPROM.update(address+1, LBOutputs[i].GetclockDivider());
+    EEPROM.update(address+2, LBOutputs[i].GetbeatCountDivider());
+    EEPROM.update(address+3, LBOutputs[i].GetrandomRange());
+  }
+}
+
+void GetSettings() {
+  bpm = EEPROM.get(10, bpm);
+  ppqn = EEPROM.read(20);
+  clockSource = EEPROM.read(30);
+  statusClock = EEPROM.read(40);
+
+  for (int i = 0; i < maxLBOutput; i++) {
+    byte address = 100 + (i * 10); // start at 100 plus 10 for every output
+    LBOutputs[i].SetType(EEPROM.read(address));
+    LBOutputs[i].SetclockDivider(EEPROM.read(address+1));
+    LBOutputs[i].SetbeatCountDivider(EEPROM.read(address+2));
+    LBOutputs[i].SetrandomRange(EEPROM.read(address+3));
+  }
+}
+
 //Prints the clock status to the screen
 void printScreenStatus() {
     display.setCursor(0,0);    
@@ -431,6 +452,9 @@ void printScreenMenuSelection() {
       case 5:
         display.drawLine(0, 31, 130, 31, WHITE); // OutputType Value
         break;
+      case 6:
+        display.drawLine(0, 15, 80, 15, WHITE); // OutputType Value
+        break;
     }
 }
 
@@ -454,6 +478,17 @@ void printScreenOutputs() {
     display.display();
 }
 
+void printScreenSaveSettings() {
+    display.clearDisplay(); 
+    if(saving) {
+      printScreenSaved(); 
+    } else {
+      printScreenSaveQuestion();
+    }
+    printScreenMenuSelection();
+    display.display();
+}
+
 void printScreenOutputName() {
     display.setCursor(0,0);    
     display.setTextSize(2);      
@@ -470,4 +505,16 @@ void printScreenOutputTypeValue() {
     display.setCursor(0,23);    
     display.setTextSize(1);      
     display.print(LBOutputs[selectedLBOutput].GetTypeValueText()); 
+}
+
+void printScreenSaveQuestion() {
+    display.setCursor(0,0);    
+    display.setTextSize(2);      
+    display.print("Save ??"); 
+}
+
+void printScreenSaved() {
+    display.setCursor(0,0);    
+    display.setTextSize(1);      
+    //display.print("Saved...."); 
 }

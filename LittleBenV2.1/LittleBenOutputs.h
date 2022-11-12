@@ -39,10 +39,19 @@ class LittleBenOutput {
     String GetName();
     
     String GetTypeName();
+    byte GetType();
     String GetTypeValueText(); 
-    
     void SetType(int value);
     void SetTypeValue(int value);
+
+    byte GetclockDivider();
+    void SetclockDivider(byte value);
+    
+    byte GetbeatCountDivider();
+    void SetbeatCountDivider(byte value);
+    
+    byte GetrandomRange();
+    void SetrandomRange(byte value);
 
     void resetCounters(); // Reset all counter used when LittleBen is stopped.
 };
